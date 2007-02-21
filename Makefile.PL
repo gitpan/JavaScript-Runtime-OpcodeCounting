@@ -60,18 +60,15 @@ WriteMakefile(
     NAME              => 'JavaScript::Runtime::OpcodeCounting',
     VERSION_FROM      => 'lib/JavaScript/Runtime/OpcodeCounting.pm', # finds $VERSION
     PREREQ_PM         => {
-		'JavaScript'	=> 1.02,
+		'JavaScript'	=> 1.03,
 		'Test::More'  	=> 0,
-		'Test::Warn'    => 0,
-	}, # e.g., Module::Name => 1.1
+	},
     ($] >= 5.005 ?     ## Add these new keywords supported since 5.005
       (ABSTRACT_FROM  => 'lib/JavaScript/Runtime/OpcodeCounting.pm', # retrieve abstract from module
        AUTHOR         => 'Claes Jakobsson <claesjac@cpan.org>') : ()),
     LIBS              => [''], # e.g., '-lm'
     DEFINE            => '', # e.g., '-DHAVE_SOMETHING'
-	# Insert -I. if you add *.h files later:
     INC               => join(" ", map { "-I$_" } @incs),
 	TYPEMAPS		  => [$typemap_path],
-	# Un-comment this if you add C files to link with later:
-    # OBJECT            => '$(O_FILES)', # link all the C files too
+	LICENSE			  => 'perl',
 );

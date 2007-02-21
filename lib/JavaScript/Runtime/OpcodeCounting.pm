@@ -8,55 +8,48 @@ use Carp qw(croak);
 
 use JavaScript::Error::OpcodeLimitExceeded;
 
-use base qw(JavaScript::Runtime);
-
-our $VERSION = '1.00';
+our $VERSION = '1.01';
 
 require XSLoader;
 XSLoader::load('JavaScript::Runtime::OpcodeCounting', $VERSION);
 
-sub new {
-	my $pkg = shift;
-	my $self = $pkg->SUPER::new(@_);
-
-	jsr_initialize($self->{_impl});
-	
-	return $self;
+sub _init {
+	my $rt = shift;
+	my $handler = jsr_init();
+	$rt->_add_interrupt_handler($handler);
+	$rt->{_OpcodeCounting} = $handler;
+	1;
 }
 
-sub DESTROY {
-	my $self = shift;
-	jsr_destroy($self->{_impl});
-	$self->SUPER::DESTROY();
+sub _destroy {
+	my $rt = shift;
+	jsr_destroy($rt->{_OpcodeCounting});
+	delete $rt->{_OpcodeCounting};
 	1;
 }
 
 sub set_opcount {
-	my ($self, $opcount) = @_;
+	my ($rt, $opcount) = @_;
 	croak "opcount is negative" if $opcount < 0;
-	jsr_set_opcount($self->{_impl}, $opcount);
+	jsr_set_opcount($rt->{_OpcodeCounting}, $opcount);
 	1;
 }
 
 sub get_opcount {
-	my $self = shift;
-	return jsr_get_opcount($self->{_impl});
+	my $rt = shift;
+	return jsr_get_opcount($rt->{_OpcodeCounting});
 }
 
 sub set_opcount_limit {
-	my ($self, $limit) = @_;
+	my ($rt, $limit) = @_;
 	croak "limit is negative" if $limit < 0;
-	jsr_set_opcount_limit($self->{_impl}, $limit);
+	jsr_set_opcount_limit($rt->{_OpcodeCounting}, $limit);
 	1;
 }
 
 sub get_opcount_limit {
-	my $self = shift;
-	return jsr_get_opcount_limit($self->{_impl});
-}
-
-sub set_interrupt_handler {
-	warn "Setting an interrupt handler is not permitted in this runtime class";
+	my $rt = shift;
+	return jsr_get_opcount_limit($rt->{_OpcodeCounting});
 }
 
 1;
@@ -70,7 +63,7 @@ JavaScript::Runtime::OpcodeCounting - JavaScript::Runtime that counts how many o
   use JavaScript;
   use JavaScript::Runtime::OpcodeCounting;
   
-  my $runtime = JavaScript::Runtime::OpcodeCounting->new();
+  my $runtime = JavaScript::Runtime->new(qw(-OpcodeCounting));
   my $context = $runtime->create_context();
 
   $runtime->set_opcount(0);
@@ -89,16 +82,6 @@ Currently both the counter and the limit are implemented as U32 values. If lots,
 of opcodes are executed without resetting the counter it will eventually overflow.
 
 =head1 INTERFACE
-
-=head2 CLASS METHODS
-
-=over 4
-
-=item new ( ... )
-
-Creates a new runtime object. See L<JavaScript::Runtime/new> for arguments.
-
-=back
 
 =head2 INSTANCE METHODS
 
@@ -120,11 +103,6 @@ Returns the current limit before we abort execution.
 
 Sets the limit to I<$limit>. If set to 0 no abortion will occur.
 
-=item set_interrupt_handler
-
-As the interrupt handler is used to count opcode execution we cannot permit others to install an interrupt handler. Therefore this 
-method does nothing except produces a warning.
-
 =back
 
 =begin PRIVATE
@@ -133,7 +111,7 @@ method does nothing except produces a warning.
 
 =over 4
 
-=item jsr_initialize
+=item jsr_init
 
 Sets the interrupt handler and populates I<PJS_Runtime/ext> with a PJS_Runtime_OpcodeCounting structure.
 

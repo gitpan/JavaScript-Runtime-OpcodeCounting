@@ -1,14 +1,13 @@
 --- #YAML:1.0
 name:                JavaScript-Runtime-OpcodeCounting
-version:             1.00
+version:             1.01
 abstract:            JavaScript::Runtime that counts how many opcodes that are executed
-license:             ~
+license:             perl
 generated_by:        ExtUtils::MakeMaker version 6.31
 distribution_type:   module
 requires:     
-    JavaScript:                    1.02
+    JavaScript:                    1.03
     Test::More:                    0
-    Test::Warn:                    0
 meta-spec:
     url:     http://module-build.sourceforge.net/META-spec-v1.2.html
     version: 1.2

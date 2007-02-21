@@ -1,17 +1,17 @@
 #!perl
 
-use Test::More tests => 10;
-use Test::Warn;
+use Test::More tests => 9;
+
+use JavaScript;
 
 BEGIN { use_ok('JavaScript::Runtime::OpcodeCounting'); }
 
-my $runtime = JavaScript::Runtime::OpcodeCounting->new();
+my $runtime = JavaScript::Runtime->new(qw(-OpcodeCounting));
 
 is($runtime->get_opcount(), 0, "Default number is 0");
 is($runtime->get_opcount_limit(), 0, "Default limit is 0");
 
 my $context = $runtime->create_context();
-
 
 # Execute some code
 $context->eval("1+1");
@@ -35,7 +35,3 @@ $runtime->set_opcount_limit(0);
 
 $context->eval("for(i = 0; i < 100; i++) {}");
 ok(!defined $@);
-
-warning_is {
-	$runtime->set_interrupt_handler(sub {});
-} "Setting an interrupt handler is not permitted in this runtime class", "Emitting warning correctly";

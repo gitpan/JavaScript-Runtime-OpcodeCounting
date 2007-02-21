@@ -13,9 +13,8 @@ struct PJS_Runtime_OpcodeCounting {
 
 typedef struct PJS_Runtime_OpcodeCounting PJS_Runtime_OpcodeCounting;
 
-static JSTrapStatus opcount_interrupt_handler(JSContext *cx, JSScript *script, jsbytecode *pc, jsval *rval, void *closure) {
-	PJS_Runtime *rt = (PJS_Runtime *) closure;
-	PJS_Runtime_OpcodeCounting *opcount = (PJS_Runtime_OpcodeCounting *) rt->ext;
+static JSTrapStatus opcodecounting_interrupt_handler(JSContext *cx, JSScript *script, jsbytecode *pc, jsval *rval, void *data) {
+	PJS_Runtime_OpcodeCounting *opcount = (PJS_Runtime_OpcodeCounting *) data;
 	
 	opcount->count++;
 	
@@ -30,10 +29,10 @@ static JSTrapStatus opcount_interrupt_handler(JSContext *cx, JSScript *script, j
 
 MODULE = JavaScript::Runtime::OpcodeCounting		PACKAGE = JavaScript::Runtime::OpcodeCounting
 
-void
-jsr_initialize(rt)
-	PJS_Runtime *rt
+PJS_InterruptHandler *
+jsr_init()
 	PREINIT:
+        PJS_InterruptHandler       *handler;
 		PJS_Runtime_OpcodeCounting *opcount;
 	CODE:
 		Newz(1, opcount, 1, PJS_Runtime_OpcodeCounting);
@@ -44,60 +43,62 @@ jsr_initialize(rt)
 		opcount->count = 0;
 		opcount->limit = 0;
 		
-		rt->ext = (void *) opcount;
-		
-		JS_SetInterrupt(rt->rt, opcount_interrupt_handler, rt);		
-
+		Newz(1, handler, 1, PJS_InterruptHandler);
+		if (handler == NULL) {
+		    Safefree(opcount);
+		    croak("Failed to allocate memory for PJS_InterruptHandler");
+		}
+		handler->handler = opcodecounting_interrupt_handler;
+		handler->data = (void *) opcount;
+		RETVAL = handler;
+	OUTPUT:
+	    RETVAL
+	    
 void
-jsr_destroy(rt)
-	PJS_Runtime *rt;
-	PREINIT:
-		JSTrapHandler	trap_handler;
-		void			*tmp;
+jsr_destroy(handler)
+	PJS_InterruptHandler *handler;
 	CODE:
-		JS_ClearInterrupt(rt->rt, &trap_handler, &tmp);
-		
-		Safefree(rt->ext);
-		rt->ext = NULL;
+        Safefree(handler->data);
+		Safefree(handler);
 		
 I32
-jsr_get_opcount(rt)
-	PJS_Runtime *rt;
+jsr_get_opcount(handler)
+	PJS_InterruptHandler *handler;
 	PREINIT:
 		PJS_Runtime_OpcodeCounting *opcount;
 	CODE:
-		opcount = (PJS_Runtime_OpcodeCounting *) rt->ext;
+		opcount = (PJS_Runtime_OpcodeCounting *) handler->data;
 		RETVAL = opcount->count;
 	OUTPUT:
 		RETVAL
 		
 void
-jsr_set_opcount(rt,count)
-	PJS_Runtime *rt;
+jsr_set_opcount(handler,count)
+	PJS_InterruptHandler *handler;
 	I32			count;
 	PREINIT:
 		PJS_Runtime_OpcodeCounting *opcount;
 	CODE:
-		opcount = (PJS_Runtime_OpcodeCounting *) rt->ext;
+		opcount = (PJS_Runtime_OpcodeCounting *) handler->data;
 		opcount->count = count;
 		
 I32
-jsr_get_opcount_limit(rt)
-	PJS_Runtime *rt;
+jsr_get_opcount_limit(handler)
+	PJS_InterruptHandler *handler;
 	PREINIT:
 		PJS_Runtime_OpcodeCounting *opcount;
 	CODE:
-		opcount = (PJS_Runtime_OpcodeCounting *) rt->ext;
+		opcount = (PJS_Runtime_OpcodeCounting *) handler->data;
 		RETVAL = opcount->limit;
 	OUTPUT:
 		RETVAL
 		
 void
-jsr_set_opcount_limit(rt,limit)
-	PJS_Runtime *rt;
+jsr_set_opcount_limit(handler,limit)
+	PJS_InterruptHandler *handler;
 	I32			limit;
 	PREINIT:
 		PJS_Runtime_OpcodeCounting *opcount;
 	CODE:
-		opcount = (PJS_Runtime_OpcodeCounting *) rt->ext;
+		opcount = (PJS_Runtime_OpcodeCounting *) handler->data;
 		opcount->limit = limit;
